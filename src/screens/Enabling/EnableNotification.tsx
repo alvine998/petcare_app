@@ -4,12 +4,32 @@ import normalize from 'react-native-normalize';
 import { COLORS } from '../../config/color';
 import BackButton from '../../components/BackButton';
 import { Button } from '../../components/Button';
+import { auth } from '../../config/firebase';
+import { requestNotificationPermissionAndSaveToken } from '../../utils/notifications';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function EnableNotification({
   navigation,
 }: {
   navigation: any;
 }) {
+  const handleAllow = async () => {
+    const user = auth().currentUser;
+    try {
+      await requestNotificationPermissionAndSaveToken(user?.uid ?? null);
+    } catch (e) {
+      // silently ignore, user can still continue
+    } finally {
+      await AsyncStorage.setItem('hasOnboardedPermissions', 'true');
+      navigation.navigate('Home');
+    }
+  };
+
+  const handleSkip = async () => {
+    await AsyncStorage.setItem('hasOnboardedPermissions', 'true');
+    navigation.navigate('Home');
+  };
+
   return (
     <View
       style={{
@@ -69,7 +89,7 @@ export default function EnableNotification({
             height: normalize(50),
             marginTop: normalize(40),
           }}
-          onPress={() => navigation.navigate('Home')}
+          onPress={handleAllow}
         >
           <Text
             style={{
@@ -88,7 +108,7 @@ export default function EnableNotification({
             height: normalize(50),
             marginTop: normalize(20),
           }}
-          onPress={() => navigation.navigate('Home')}
+          onPress={handleSkip}
         >
           <Text
             style={{

@@ -13,6 +13,7 @@ import BackButton from '../../components/BackButton';
 import { Input } from '../../components/Input';
 import { Button } from '../../components/Button';
 import { signInWithEmail, signInWithGoogle } from '../../utils/auth';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function Login({ navigation }: { navigation: any }) {
   const [email, setEmail] = useState('');
@@ -26,7 +27,12 @@ export default function Login({ navigation }: { navigation: any }) {
     try {
       await signInWithEmail(email, password);
       ToastAndroid.show('Login successful', ToastAndroid.SHORT);
-      navigation.navigate('Home');
+      const hasOnboarded = await AsyncStorage.getItem('hasOnboardedPermissions');
+      if (hasOnboarded === 'true') {
+        navigation.navigate('Home');
+      } else {
+        navigation.navigate('EnableLocation');
+      }
     } catch (e) {
       // errors are already alerted in auth util
     }
@@ -36,7 +42,12 @@ export default function Login({ navigation }: { navigation: any }) {
     try {
       await signInWithGoogle();
       ToastAndroid.show('Login with Google successful', ToastAndroid.SHORT);
-      navigation.navigate('Home');
+      const hasOnboarded = await AsyncStorage.getItem('hasOnboardedPermissions');
+      if (hasOnboarded === 'true') {
+        navigation.navigate('Home');
+      } else {
+        navigation.navigate('EnableLocation');
+      }
     } catch (e) {
       // errors are already alerted in auth util
     }

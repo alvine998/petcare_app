@@ -78,3 +78,6 @@ yarn-error.log
 firebase.json
 firebase.debug.json
 
+# Google Services
+google-services.json
+google-services.debug.json

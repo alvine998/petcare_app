@@ -6,6 +6,7 @@ import BackButton from '../../components/BackButton';
 import { Input } from '../../components/Input';
 import { Button } from '../../components/Button';
 import { signUpWithEmail, signInWithGoogle } from '../../utils/auth';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function Register({ navigation }: { navigation: any }) {
   const [email, setEmail] = useState('');
@@ -24,7 +25,12 @@ export default function Register({ navigation }: { navigation: any }) {
         lastName,
       });
       ToastAndroid.show('Register successful', ToastAndroid.SHORT);
-      navigation.navigate('Home');
+      const hasOnboarded = await AsyncStorage.getItem('hasOnboardedPermissions');
+      if (hasOnboarded === 'true') {
+        navigation.navigate('Home');
+      } else {
+        navigation.navigate('EnableLocation');
+      }
     } catch (e) {
       // errors are already alerted in auth util
     }
@@ -33,7 +39,12 @@ export default function Register({ navigation }: { navigation: any }) {
   const handleGoogleRegister = async () => {
     try {
       await signInWithGoogle();
-      navigation.navigate('Home');
+      const hasOnboarded = await AsyncStorage.getItem('hasOnboardedPermissions');
+      if (hasOnboarded === 'true') {
+        navigation.navigate('Home');
+      } else {
+        navigation.navigate('EnableLocation');
+      }
     } catch (e) {
       // errors are already alerted in auth util
     }

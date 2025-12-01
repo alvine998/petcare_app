@@ -6,6 +6,15 @@ import BackButton from '../../components/BackButton';
 import { Button } from '../../components/Button';
 
 export default function EnableLocation({ navigation }: { navigation: any }) {
+  const handleAllow = () => {
+    // Here you can request real location permission with react-native-permissions or similar.
+    navigation.navigate('EnableNotification');
+  };
+
+  const handleSkip = () => {
+    navigation.navigate('EnableNotification');
+  };
+
   return (
     <View
       style={{
@@ -65,7 +74,7 @@ export default function EnableLocation({ navigation }: { navigation: any }) {
             height: normalize(50),
             marginTop: normalize(40),
           }}
-          onPress={() => navigation.navigate('Home')}
+          onPress={handleAllow}
         >
           <Text
             style={{
@@ -84,7 +93,7 @@ export default function EnableLocation({ navigation }: { navigation: any }) {
             height: normalize(50),
             marginTop: normalize(20),
           }}
-          onPress={() => navigation.navigate('Home')}
+          onPress={handleSkip}
         >
           <Text
             style={{
