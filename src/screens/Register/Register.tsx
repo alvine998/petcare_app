@@ -1,10 +1,11 @@
-import { View, Text, Alert, TouchableOpacity, Image } from 'react-native';
+import { View, Text, Alert, TouchableOpacity, Image, ToastAndroid } from 'react-native';
 import React, { useState } from 'react';
 import normalize from 'react-native-normalize';
 import { COLORS } from '../../config/color';
 import BackButton from '../../components/BackButton';
 import { Input } from '../../components/Input';
 import { Button } from '../../components/Button';
+import { signUpWithEmail, signInWithGoogle } from '../../utils/auth';
 
 export default function Register({ navigation }: { navigation: any }) {
   const [email, setEmail] = useState('');
@@ -12,10 +13,30 @@ export default function Register({ navigation }: { navigation: any }) {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
 
-  const handleRegister = () => {
-    console.log('Login');
-    Alert.alert('Login', 'Login successful');
-    // navigation.navigate('Home');
+  const handleRegister = async () => {
+    if (!email || !password || !firstName || !lastName) {
+      Alert.alert('Error', 'Please fill all fields');
+      return;
+    }
+    try {
+      await signUpWithEmail(email, password, {
+        firstName,
+        lastName,
+      });
+      ToastAndroid.show('Register successful', ToastAndroid.SHORT);
+      navigation.navigate('Home');
+    } catch (e) {
+      // errors are already alerted in auth util
+    }
+  };
+
+  const handleGoogleRegister = async () => {
+    try {
+      await signInWithGoogle();
+      navigation.navigate('Home');
+    } catch (e) {
+      // errors are already alerted in auth util
+    }
   };
   return (
     <View
@@ -120,7 +141,7 @@ export default function Register({ navigation }: { navigation: any }) {
               justifyContent: 'center',
               gap: normalize(10),
             }}
-            onPress={handleRegister}
+            onPress={handleGoogleRegister}
           >
             <Image
               source={require('../../assets/icons/google.png')}

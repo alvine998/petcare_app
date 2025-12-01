@@ -1,19 +1,45 @@
-import { View, Text, Alert, TouchableOpacity, Image } from 'react-native';
+import {
+  View,
+  Text,
+  Alert,
+  TouchableOpacity,
+  Image,
+  ToastAndroid,
+} from 'react-native';
 import React, { useState } from 'react';
 import normalize from 'react-native-normalize';
 import { COLORS } from '../../config/color';
 import BackButton from '../../components/BackButton';
 import { Input } from '../../components/Input';
 import { Button } from '../../components/Button';
+import { signInWithEmail, signInWithGoogle } from '../../utils/auth';
 
 export default function Login({ navigation }: { navigation: any }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
-  const handleLogin = () => {
-    console.log('Login');
-    Alert.alert('Login', 'Login successful');
-    // navigation.navigate('Home');
+  const handleLogin = async () => {
+    if (!email || !password) {
+      Alert.alert('Error', 'Please enter email and password');
+      return;
+    }
+    try {
+      await signInWithEmail(email, password);
+      ToastAndroid.show('Login successful', ToastAndroid.SHORT);
+      navigation.navigate('Home');
+    } catch (e) {
+      // errors are already alerted in auth util
+    }
+  };
+
+  const handleGoogleLogin = async () => {
+    try {
+      await signInWithGoogle();
+      ToastAndroid.show('Login with Google successful', ToastAndroid.SHORT);
+      navigation.navigate('Home');
+    } catch (e) {
+      // errors are already alerted in auth util
+    }
   };
   return (
     <View
@@ -61,7 +87,7 @@ export default function Login({ navigation }: { navigation: any }) {
             style={{ backgroundColor: COLORS.secondary }}
           />
           <TouchableOpacity
-            onPress={handleLogin}
+            onPress={() => navigation.navigate('ForgotPassword')}
             style={{
               alignItems: 'center',
               justifyContent: 'center',
@@ -119,7 +145,7 @@ export default function Login({ navigation }: { navigation: any }) {
               justifyContent: 'center',
               gap: normalize(10),
             }}
-            onPress={handleLogin}
+            onPress={handleGoogleLogin}
           >
             <Image
               source={require('../../assets/icons/google.png')}
