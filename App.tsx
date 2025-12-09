@@ -9,9 +9,18 @@ import Register from './src/screens/Register/Register';
 import CreatePet from './src/screens/Pet/CreatePet';
 import EnableLocation from './src/screens/Enabling/EnableLocation';
 import EnableNotification from './src/screens/Enabling/EnableNotification';
-import Home from './src/screens/Home/Home';
 import { configureFirebase } from './src/config/firebase';
 import ForgotPassword from './src/screens/ForgotPassword/ForgotPassword';
+import Splash from './src/screens/Splash/Splash';
+import EditProfile from './src/screens/Profile/EditProfile';
+import Notification from './src/screens/Notification/Notification';
+import AllPets from './src/screens/Pet/AllPets';
+import EditPet from './src/screens/Pet/EditPet';
+import BottomTabs from './src/navigation/BottomTabs';
+import ListInformation from './src/screens/Pet/ListInformation';
+import PetVaccination from './src/screens/Pet/Vaccination/PetVaccination';
+import GroomingPlan from './src/screens/Pet/Grooming/GroomingPlan';
+import BoardingPlan from './src/screens/Pet/PetBoarding/BoardingPlan';
 
 enableScreens(true);
 
@@ -23,8 +32,17 @@ export type RootStackParamList = {
   EnableLocation: undefined;
   EnableNotification: undefined;
   CreatePet: undefined;
-  Home: undefined;
+  MainTabs: undefined;
   ForgotPassword: undefined;
+  Splash: undefined;
+  EditProfile: undefined;
+  Notification: undefined;
+  AllPets: undefined;
+  EditPet: { petId: string };
+  ListInformation: undefined;
+  PetVaccination: undefined;
+  GroomingPlan: undefined;
+  BoardingPlan: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -37,9 +55,10 @@ export default function App() {
   return (
     <NavigationContainer>
       <Stack.Navigator
-        initialRouteName="Welcome1"
+        initialRouteName="Splash"
         screenOptions={{ headerShown: false }}
       >
+        <Stack.Screen name="Splash" component={Splash} />
         <Stack.Screen name="Welcome1" component={Welcome1} />
         <Stack.Screen name="Welcome2" component={Welcome2} />
         <Stack.Screen name="Login" component={Login} />
@@ -50,8 +69,16 @@ export default function App() {
           component={EnableNotification}
         />
         <Stack.Screen name="CreatePet" component={CreatePet} />
-        <Stack.Screen name="Home" component={Home} />
+        <Stack.Screen name="MainTabs" component={BottomTabs} />
         <Stack.Screen name="ForgotPassword" component={ForgotPassword} />
+        <Stack.Screen name="EditProfile" component={EditProfile} />
+        <Stack.Screen name="Notification" component={Notification} />
+        <Stack.Screen name="AllPets" component={AllPets} />
+        <Stack.Screen name="EditPet" component={EditPet} />
+        <Stack.Screen name="ListInformation" component={ListInformation} />
+        <Stack.Screen name="PetVaccination" component={PetVaccination} />
+        <Stack.Screen name="GroomingPlan" component={GroomingPlan} />
+        <Stack.Screen name="BoardingPlan" component={BoardingPlan} />
       </Stack.Navigator>
     </NavigationContainer>
   );

@@ -21,7 +21,7 @@ export default function EnableNotification({
       // silently ignore, user can still continue
     } finally {
       await AsyncStorage.setItem('hasOnboardedPermissions', 'true');
-      navigation.navigate('Home');
+      navigation.navigate('MainTabs');
     }
   };
 

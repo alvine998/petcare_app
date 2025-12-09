@@ -1,6 +1,22 @@
 import { Alert, ToastAndroid } from 'react-native';
 import { auth, GoogleSignin } from '../config/firebase';
 import firestore from '@react-native-firebase/firestore';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+// Function to save user session to AsyncStorage
+const saveUserSession = async (user: any) => {
+  try {
+    const userData = {
+      uid: user.uid,
+      email: user.email,
+      displayName: user.displayName || '',
+      photoURL: user.photoURL || '',
+    };
+    await AsyncStorage.setItem('user', JSON.stringify(userData));
+  } catch (error) {
+    console.log('Error saving user session:', error);
+  }
+};
 
 export const signUpWithEmail = async (
   email: string,
@@ -24,6 +40,9 @@ export const signUpWithEmail = async (
       );
     }
 
+    // Save user session to AsyncStorage after register
+    await saveUserSession(user);
+
     return user;
   } catch (error: any) {
     console.log('signUpWithEmail error', error);
@@ -35,7 +54,10 @@ export const signUpWithEmail = async (
 export const signInWithEmail = async (email: string, password: string) => {
   try {
     const result = await auth().signInWithEmailAndPassword(email, password);
-    return result.user;
+    const user = result.user;
+    // Save user session to AsyncStorage
+    await saveUserSession(user);
+    return user;
   } catch (error: any) {
     console.log('signInWithEmail error', error);
     // Alert.alert('Login failed', error.message ?? 'Something went wrong');
@@ -47,6 +69,8 @@ export const signInWithEmail = async (email: string, password: string) => {
 export const signOut = async () => {
   try {
     await auth().signOut();
+    // Remove user session from AsyncStorage
+    await AsyncStorage.removeItem('user');
   } catch (error: any) {
     console.log('signOut error', error);
     // Alert.alert('Logout failed', error.message ?? 'Something went wrong');
@@ -60,7 +84,10 @@ export const signInWithGoogle = async () => {
     const { idToken } = await GoogleSignin.signIn();
     const googleCredential = auth.GoogleAuthProvider.credential(idToken);
     const result = await auth().signInWithCredential(googleCredential);
-    return result.user;
+    const user = result.user;
+    // Save user session to AsyncStorage
+    await saveUserSession(user);
+    return user;
   } catch (error: any) {
     console.log('signInWithGoogle error', error);
     // Alert.alert('Google Sign-In failed', error.message ?? 'Something went wrong');

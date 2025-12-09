@@ -27,7 +27,7 @@ export default function Register({ navigation }: { navigation: any }) {
       ToastAndroid.show('Register successful', ToastAndroid.SHORT);
       const hasOnboarded = await AsyncStorage.getItem('hasOnboardedPermissions');
       if (hasOnboarded === 'true') {
-        navigation.navigate('Home');
+        navigation.navigate('MainTabs');
       } else {
         navigation.navigate('EnableLocation');
       }
@@ -41,7 +41,7 @@ export default function Register({ navigation }: { navigation: any }) {
       await signInWithGoogle();
       const hasOnboarded = await AsyncStorage.getItem('hasOnboardedPermissions');
       if (hasOnboarded === 'true') {
-        navigation.navigate('Home');
+        navigation.navigate('MainTabs');
       } else {
         navigation.navigate('EnableLocation');
       }

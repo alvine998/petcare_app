@@ -40,22 +40,6 @@ export default function ListInformation({ navigation }: { navigation: any }) {
     },
   ];
 
-  const handleServicePress = (serviceId: number) => {
-    switch (serviceId) {
-      case 1: // VACCINATIONS
-        navigation.navigate('PetVaccination');
-        break;
-      case 2: // GROOMING
-        navigation.navigate('GroomingPlan');
-        break;
-      case 3: // PET BOARDING
-        navigation.navigate('BoardingPlan');
-        break;
-      default:
-        break;
-    }
-  };
-
   return (
     <View
       style={{
@@ -124,7 +108,6 @@ export default function ListInformation({ navigation }: { navigation: any }) {
         {healthServices.map((service) => (
           <TouchableOpacity
             key={service.id}
-            onPress={() => handleServicePress(service.id)}
             style={{
               backgroundColor: service.color,
               borderRadius: normalize(15),

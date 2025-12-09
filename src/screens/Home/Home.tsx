@@ -5,70 +5,232 @@ import {
   RefreshControl,
   TouchableOpacity,
   Image,
+  BackHandler,
+  Platform,
+  ToastAndroid,
+  TextInput,
 } from 'react-native';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import { COLORS } from '../../config/color';
 import normalize from 'react-native-normalize';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Button } from '../../components/Button';
+import { auth } from '../../config/firebase';
+import firestore from '@react-native-firebase/firestore';
 
 export default function Home({ navigation }: { navigation: any }) {
   const [refreshing, setRefreshing] = useState(false);
-  const [yourPets, setYourPets] = useState([
-    {
-      id: 1,
-      name: 'Buddy',
-      species: 'cat',
-      gender: 'Male',
-      birthday: '2020-01-01',
-    },
-  ]);
+  const [yourPets, setYourPets] = useState<any[]>([]);
+  const [loadingPets, setLoadingPets] = useState(false);
   const [services, setServices] = useState([
     {
       id: 1,
       name: 'Activity',
       icon: require('../../assets/images/daycare.png'),
+      navigation: 'Activity',
     },
     {
       id: 2,
       name: 'Health',
       icon: require('../../assets/images/stetoscop.png'),
+      navigation: 'ListInformation',
     },
     {
       id: 3,
       name: 'Networking',
       icon: require('../../assets/images/dog-white.png'),
+      navigation: 'Networking',
     },
     {
       id: 4,
       name: 'Location',
       icon: require('../../assets/images/pin-map-white.png'),
+      navigation: 'Location',
     },
   ]);
   const [user, setUser] = useState();
-  useEffect(() => {
-    let mounted = true;
-    const loadUser = async () => {
-      try {
-        const stored = await AsyncStorage.getItem('user');
-        if (stored && mounted) {
-          setUser(JSON.parse(stored));
+  const [firstName, setFirstName] = useState('');
+  const [showSearch, setShowSearch] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const [lastBackPressed, setLastBackPressed] = useState<number | null>(null);
+
+  // Hanya aktif saat berada di Home screen
+  useFocusEffect(
+    useCallback(() => {
+      const onBackPress = () => {
+        // Di iOS tidak ada hardware back, jadi biarkan default
+        if (Platform.OS !== 'android') {
+          return false;
         }
-      } catch (err) {
-        console.warn('Failed to load user', err);
+
+        const now = Date.now();
+
+        if (lastBackPressed && now - lastBackPressed < 2000) {
+          // Tekan dua kali dalam 2 detik -> keluar aplikasi
+          BackHandler.exitApp();
+          return true;
+        }
+
+        setLastBackPressed(now);
+        ToastAndroid.show('Press again to exit', ToastAndroid.SHORT);
+
+        // Mencegah navigasi back default
+        return true;
+      };
+
+      const subscription = BackHandler.addEventListener(
+        'hardwareBackPress',
+        onBackPress,
+      );
+
+      return () => {
+        subscription.remove();
+      };
+    }, [lastBackPressed]),
+  );
+  const loadPets = useCallback(async () => {
+    let mounted = true;
+    try {
+      const currentUser = auth().currentUser;
+      if (!currentUser) {
+        if (mounted) {
+          setYourPets([]);
+        }
+        return;
       }
-    };
-    loadUser();
-    return () => {
-      mounted = false;
-    };
+
+      setLoadingPets(true);
+
+      // Query tanpa orderBy untuk menghindari kebutuhan index
+      // Sorting dilakukan di client side
+      const petsSnapshot = await firestore()
+        .collection('pets')
+        .where('userId', '==', currentUser.uid)
+        .get();
+
+      if (mounted) {
+        const petsData = petsSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
+
+        // Sort secara manual berdasarkan createdAt (terbaru dulu)
+        petsData.sort((a: any, b: any) => {
+          let aTime = 0;
+          let bTime = 0;
+
+          // Handle Firestore Timestamp
+          if (a.createdAt) {
+            if (typeof a.createdAt.toMillis === 'function') {
+              aTime = a.createdAt.toMillis();
+            } else if (a.createdAt._seconds) {
+              aTime =
+                a.createdAt._seconds * 1000 +
+                (a.createdAt._nanoseconds || 0) / 1000000;
+            }
+          }
+
+          if (b.createdAt) {
+            if (typeof b.createdAt.toMillis === 'function') {
+              bTime = b.createdAt.toMillis();
+            } else if (b.createdAt._seconds) {
+              bTime =
+                b.createdAt._seconds * 1000 +
+                (b.createdAt._nanoseconds || 0) / 1000000;
+            }
+          }
+
+          return bTime - aTime; // Descending order (newest first)
+        });
+
+        setYourPets(petsData);
+      }
+    } catch (error: any) {
+      console.warn('Failed to load pets:', error);
+      if (mounted) {
+        ToastAndroid.show(
+          'Failed to load pets: ' + (error.message || 'Unknown error'),
+          ToastAndroid.SHORT,
+        );
+      }
+    } finally {
+      if (mounted) {
+        setLoadingPets(false);
+      }
+    }
   }, []);
-  const handleRefresh = () => {
+
+  const loadUserData = useCallback(async () => {
+    let mounted = true;
+    try {
+      const stored = await AsyncStorage.getItem('user');
+      if (stored && mounted) {
+        const userData = JSON.parse(stored);
+        setUser(userData);
+
+        // Load firstName dari Firestore
+        const currentUser = auth().currentUser;
+        if (currentUser) {
+          try {
+            const userDoc = await firestore()
+              .collection('users')
+              .doc(currentUser.uid)
+              .get();
+
+            if (userDoc.exists() && mounted) {
+              const firestoreData = userDoc.data();
+              setFirstName(firestoreData?.firstName || '');
+            } else if (mounted) {
+              // Jika tidak ada di Firestore, coba split dari displayName
+              const displayName = userData.displayName || '';
+              const nameParts = displayName.split(' ');
+              setFirstName(nameParts[0] || '');
+            }
+          } catch (firestoreError) {
+            console.warn(
+              'Failed to load firstName from Firestore:',
+              firestoreError,
+            );
+            // Fallback ke displayName jika Firestore error
+            if (mounted) {
+              const displayName = userData.displayName || '';
+              const nameParts = displayName.split(' ');
+              setFirstName(nameParts[0] || '');
+            }
+          }
+        }
+      }
+    } catch (err) {
+      console.warn('Failed to load user', err);
+    }
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadUserData();
+      loadPets();
+    }, [loadUserData, loadPets]),
+  );
+
+  const handleRefresh = async () => {
     setRefreshing(true);
-    setTimeout(() => {
+    try {
+      await Promise.all([loadUserData(), loadPets()]);
+    } catch (error) {
+      console.warn('Error refreshing:', error);
+    } finally {
       setRefreshing(false);
-    }, 2000);
+    }
   };
+
+  // Filter pets berdasarkan search query
+  const filteredPets = searchQuery
+    ? yourPets.filter(pet =>
+        pet.name.toLowerCase().includes(searchQuery.toLowerCase()),
+      )
+    : yourPets;
   return (
     <View
       style={{
@@ -105,7 +267,7 @@ export default function Home({ navigation }: { navigation: any }) {
               }}
             >
               <TouchableOpacity
-                onPress={() => navigation.navigate('CreatePet')}
+                onPress={() => navigation.navigate('EditProfile')}
                 style={{
                   backgroundColor: COLORS.warning,
                   padding: normalize(10),
@@ -132,7 +294,7 @@ export default function Home({ navigation }: { navigation: any }) {
                     color: COLORS.black,
                   }}
                 >
-                  Hi, Name
+                  Hi, {firstName || 'Name'}
                 </Text>
                 <Text
                   style={{
@@ -178,13 +340,15 @@ export default function Home({ navigation }: { navigation: any }) {
               gap: normalize(20),
             }}
           >
-            <TouchableOpacity onPress={() => navigation.navigate('CreatePet')}>
+            <TouchableOpacity onPress={() => setShowSearch(!showSearch)}>
               <Image
                 source={require('../../assets/icons/search.png')}
                 style={{ width: normalize(30), height: normalize(30) }}
               />
             </TouchableOpacity>
-            <TouchableOpacity onPress={() => navigation.navigate('CreatePet')}>
+            <TouchableOpacity
+              onPress={() => navigation.navigate('Notification')}
+            >
               <Image
                 source={require('../../assets/icons/bell.png')}
                 style={{ width: normalize(30), height: normalize(35) }}
@@ -192,6 +356,62 @@ export default function Home({ navigation }: { navigation: any }) {
             </TouchableOpacity>
           </View>
         </View>
+
+        {/* Search Input */}
+        {showSearch && (
+          <View
+            style={{
+              marginTop: normalize(20),
+              paddingHorizontal: normalize(20),
+            }}
+          >
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                backgroundColor: COLORS.secondary,
+                borderRadius: normalize(10),
+                borderWidth: 1,
+                borderColor: COLORS.gray,
+                paddingRight: normalize(10),
+              }}
+            >
+              <TextInput
+                placeholder="Search pet by name..."
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                style={{
+                  flex: 1,
+                  paddingVertical: normalize(15),
+                  paddingHorizontal: normalize(15),
+                  fontSize: normalize(16),
+                  color: COLORS.black,
+                }}
+                placeholderTextColor={COLORS.gray}
+                autoFocus={true}
+              />
+              <TouchableOpacity
+                onPress={() => {
+                  setShowSearch(false);
+                  setSearchQuery('');
+                }}
+                style={{
+                  padding: normalize(5),
+                }}
+              >
+                <Text
+                  style={{
+                    fontSize: normalize(20),
+                    color: COLORS.gray,
+                    fontWeight: 'bold',
+                  }}
+                >
+                  ×
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
 
         {/* Your Pets */}
         <View
@@ -215,7 +435,7 @@ export default function Home({ navigation }: { navigation: any }) {
               Your Pets
             </Text>
             <TouchableOpacity
-              onPress={() => navigation.navigate('CreatePet')}
+              onPress={() => navigation.navigate('AllPets')}
               style={{
                 padding: normalize(10),
                 borderColor: COLORS.lightGray,
@@ -243,7 +463,8 @@ export default function Home({ navigation }: { navigation: any }) {
               justifyContent: 'center',
             }}
           >
-            <View
+            <TouchableOpacity
+              onPress={() => navigation.navigate('CreatePet')}
               style={{
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -251,7 +472,7 @@ export default function Home({ navigation }: { navigation: any }) {
                 gap: normalize(10),
               }}
             >
-              <TouchableOpacity
+              <View
                 style={{
                   backgroundColor: COLORS.lightYellow,
                   padding: normalize(10),
@@ -269,7 +490,7 @@ export default function Home({ navigation }: { navigation: any }) {
                   source={require('../../assets/icons/plus-yellow.png')}
                   style={{ width: normalize(15), height: normalize(15) }}
                 />
-              </TouchableOpacity>
+              </View>
               <Text
                 style={{
                   fontSize: normalize(14),
@@ -279,10 +500,13 @@ export default function Home({ navigation }: { navigation: any }) {
               >
                 Add Pet
               </Text>
-            </View>
-            {yourPets.map(pet => (
-              <View
+            </TouchableOpacity>
+            {filteredPets.map((pet: any) => (
+              <TouchableOpacity
                 key={pet.id}
+                onPress={() =>
+                  navigation.navigate('EditPet', { petId: pet.id })
+                }
                 style={{
                   justifyContent: 'center',
                   alignItems: 'center',
@@ -290,7 +514,7 @@ export default function Home({ navigation }: { navigation: any }) {
                   gap: normalize(10),
                 }}
               >
-                <TouchableOpacity
+                <View
                   style={{
                     backgroundColor: COLORS.lightGreen,
                     padding: normalize(10),
@@ -299,9 +523,20 @@ export default function Home({ navigation }: { navigation: any }) {
                     height: normalize(60),
                     alignItems: 'center',
                     justifyContent: 'center',
+                    overflow: 'hidden',
                   }}
                 >
-                  {pet?.species === 'cat' ? (
+                  {pet.photoURL ? (
+                    <Image
+                      source={{ uri: pet.photoURL }}
+                      style={{
+                        width: normalize(60),
+                        height: normalize(60),
+                        borderRadius: normalize(10),
+                      }}
+                      resizeMode="cover"
+                    />
+                  ) : pet?.species === 'cat' ? (
                     <Image
                       source={require('../../assets/icons/cat-icon.png')}
                       style={{ width: normalize(20), height: normalize(20) }}
@@ -312,7 +547,7 @@ export default function Home({ navigation }: { navigation: any }) {
                       style={{ width: normalize(20), height: normalize(20) }}
                     />
                   )}
-                </TouchableOpacity>
+                </View>
                 <Text
                   style={{
                     fontSize: normalize(14),
@@ -322,7 +557,7 @@ export default function Home({ navigation }: { navigation: any }) {
                 >
                   {pet.name}
                 </Text>
-              </View>
+              </TouchableOpacity>
             ))}
           </View>
         </View>
@@ -354,7 +589,7 @@ export default function Home({ navigation }: { navigation: any }) {
               Services
             </Text>
             <TouchableOpacity
-              onPress={() => navigation.navigate('Home')}
+              onPress={() => navigation.navigate('AllPets')}
               style={{
                 padding: normalize(10),
                 borderColor: COLORS.lightGray,
@@ -387,7 +622,7 @@ export default function Home({ navigation }: { navigation: any }) {
             {services.map(service => (
               <TouchableOpacity
                 key={service.id}
-                onPress={() => navigation.navigate('Home')}
+                onPress={() => navigation.navigate(service.navigation)}
                 style={{
                   justifyContent: 'center',
                   alignItems: 'center',

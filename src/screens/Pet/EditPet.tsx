@@ -10,7 +10,7 @@ import {
   ActivityIndicator,
   ToastAndroid,
 } from 'react-native';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import normalize from 'react-native-normalize';
 import { COLORS } from '../../config/color';
 import BackButton from '../../components/BackButton';
@@ -21,25 +21,61 @@ import { launchImageLibrary, ImagePickerResponse } from 'react-native-image-pick
 import { auth, storage } from '../../config/firebase';
 import firestore from '@react-native-firebase/firestore';
 
-export default function CreatePet({ navigation }: { navigation: any }) {
-  const [payload, setPayload] = useState([
-    {
-      name: '',
-      species: '',
-      gender: '',
-      birthday: '',
-      weight: '',
-      photo: '',
-    },
-  ]);
+export default function EditPet({ navigation, route }: { navigation: any; route: any }) {
+  const petId = route?.params?.petId;
+  const [pet, setPet] = useState({
+    name: '',
+    species: '',
+    gender: '',
+    birthday: '',
+    weight: '',
+    photo: '',
+    photoURL: '',
+  });
   const [showSpeciesPicker, setShowSpeciesPicker] = useState(false);
   const [showSexPicker, setShowSexPicker] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
-  const [currentIndex, setCurrentIndex] = useState(0);
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [deleting, setDeleting] = useState(false);
 
-  const handleImagePicker = (index: number) => {
+  useEffect(() => {
+    if (petId) {
+      loadPetData();
+    }
+  }, [petId]);
+
+  const loadPetData = async () => {
+    try {
+      setLoading(true);
+      const petDoc = await firestore().collection('pets').doc(petId).get();
+      
+      if (petDoc.exists()) {
+        const petData = petDoc.data();
+        setPet({
+          name: petData?.name || '',
+          species: petData?.species || '',
+          gender: petData?.gender || '',
+          birthday: petData?.birthday || '',
+          weight: petData?.weight || '',
+          photo: '',
+          photoURL: petData?.photoURL || '',
+        });
+      } else {
+        Alert.alert('Error', 'Pet not found');
+        navigation.goBack();
+      }
+    } catch (error: any) {
+      console.log('Error loading pet:', error);
+      Alert.alert('Error', 'Failed to load pet data');
+      navigation.goBack();
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleImagePicker = () => {
     launchImageLibrary(
       {
         mediaType: 'photo',
@@ -58,7 +94,7 @@ export default function CreatePet({ navigation }: { navigation: any }) {
         if (response.assets && response.assets[0]) {
           const uri = response.assets[0].uri;
           if (uri) {
-            handleChange(index, 'photo', uri);
+            setPet({ ...pet, photo: uri });
           }
         }
       },
@@ -82,9 +118,7 @@ export default function CreatePet({ navigation }: { navigation: any }) {
     return downloadURL;
   };
 
-  const handleCreatePet = async () => {
-    const pet = payload[0];
-
+  const handleSave = async () => {
     // Validasi
     if (!pet.name || !pet.species || !pet.gender || !pet.birthday) {
       Alert.alert('Error', 'Please fill all required fields');
@@ -97,35 +131,14 @@ export default function CreatePet({ navigation }: { navigation: any }) {
       return;
     }
 
-    // Cek jumlah pets yang sudah ada (maksimal 5 pets per user)
-    try {
-      const existingPetsSnapshot = await firestore()
-        .collection('pets')
-        .where('userId', '==', currentUser.uid)
-        .get();
-
-      if (existingPetsSnapshot.docs.length >= 5) {
-        Alert.alert(
-          'Limit Reached',
-          'You already have 5 pets. Delete existing pet to add new pet.',
-        );
-        return;
-      }
-    } catch (error: any) {
-      console.log('Error checking pet limit:', error);
-      // Continue jika error, biarkan user tetap bisa create
-    }
-
     setSaving(true);
     try {
-      let imageURL = '';
+      let imageURL = pet.photoURL;
 
-      // Upload image jika ada
+      // Upload image baru jika ada
       if (pet.photo && pet.photo.startsWith('file://')) {
         setUploading(true);
         try {
-          // Generate pet ID
-          const petId = firestore().collection('pets').doc().id;
           imageURL = await uploadImageToStorage(pet.photo, petId);
           setUploading(false);
         } catch (error: any) {
@@ -137,47 +150,91 @@ export default function CreatePet({ navigation }: { navigation: any }) {
         }
       }
 
-      // Save pet data ke Firestore
+      // Update pet data di Firestore
       const petData = {
-        userId: currentUser.uid,
         name: pet.name,
         species: pet.species,
         gender: pet.gender,
         birthday: pet.birthday,
         weight: pet.weight || '',
         photoURL: imageURL,
-        createdAt: firestore.FieldValue.serverTimestamp(),
         updatedAt: firestore.FieldValue.serverTimestamp(),
       };
 
-      await firestore().collection('pets').add(petData);
+      await firestore().collection('pets').doc(petId).update(petData);
 
-      ToastAndroid.show('Pet created successfully!', ToastAndroid.SHORT);
-      navigation.navigate('MainTabs');
+      ToastAndroid.show('Pet updated successfully!', ToastAndroid.SHORT);
+      navigation.goBack();
     } catch (error: any) {
-      console.log('Error creating pet:', error);
-      Alert.alert('Error', error.message || 'Gagal membuat pet');
+      console.log('Error updating pet:', error);
+      Alert.alert('Error', error.message || 'Failed to update pet');
     } finally {
       setSaving(false);
       setUploading(false);
     }
   };
 
-  const handleChange = (index: number, key: string, value: string) => {
-    setPayload(
-      payload.map((item, i) =>
-        i === index ? { ...item, [key]: value } : item,
-      ),
+  const handleDelete = () => {
+    Alert.alert(
+      'Delete Pet',
+      'Are you sure you want to delete this pet? This action cannot be undone.',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            setDeleting(true);
+            try {
+              const currentUser = auth().currentUser;
+              if (!currentUser) {
+                Alert.alert('Error', 'You must login first');
+                setDeleting(false);
+                return;
+              }
+
+              // Hapus pet dari Firestore
+              await firestore().collection('pets').doc(petId).delete();
+
+              // Hapus image dari Storage jika ada
+              if (pet.photoURL) {
+                try {
+                  const imageRef = storage().refFromURL(pet.photoURL);
+                  await imageRef.delete();
+                } catch (storageError) {
+                  console.log('Error deleting image from storage:', storageError);
+                  // Continue even if image deletion fails
+                }
+              }
+
+              ToastAndroid.show('Pet deleted successfully!', ToastAndroid.SHORT);
+              navigation.goBack();
+            } catch (error: any) {
+              console.log('Error deleting pet:', error);
+              Alert.alert('Error', error.message || 'Failed to delete pet');
+            } finally {
+              setDeleting(false);
+            }
+          },
+        },
+      ],
     );
   };
 
-  const handleSpeciesSelect = (species: string, index: number) => {
-    handleChange(index, 'species', species);
+  const handleChange = (key: string, value: string) => {
+    setPet({ ...pet, [key]: value });
+  };
+
+  const handleSpeciesSelect = (species: string) => {
+    handleChange('species', species);
     setShowSpeciesPicker(false);
   };
 
-  const handleSexSelect = (gender: string, index: number) => {
-    handleChange(index, 'gender', gender);
+  const handleSexSelect = (gender: string) => {
+    handleChange('gender', gender);
     setShowSexPicker(false);
   };
 
@@ -186,13 +243,13 @@ export default function CreatePet({ navigation }: { navigation: any }) {
       setShowDatePicker(false);
       if (event.type === 'set' && selectedDate) {
         const formattedDate = selectedDate.toISOString().split('T')[0];
-        handleChange(currentIndex, 'birthday', formattedDate);
+        handleChange('birthday', formattedDate);
       }
     } else {
       // iOS
       if (selectedDate) {
         const formattedDate = selectedDate.toISOString().split('T')[0];
-        handleChange(currentIndex, 'birthday', formattedDate);
+        handleChange('birthday', formattedDate);
       }
     }
   };
@@ -206,6 +263,32 @@ export default function CreatePet({ navigation }: { navigation: any }) {
       day: '2-digit',
     });
   };
+
+  if (loading) {
+    return (
+      <View
+        style={{
+          backgroundColor: COLORS.primary,
+          height: '100%',
+          width: '100%',
+          justifyContent: 'center',
+          alignItems: 'center',
+        }}
+      >
+        <ActivityIndicator size="large" color={COLORS.blue1} />
+        <Text
+          style={{
+            marginTop: normalize(20),
+            fontSize: normalize(16),
+            color: COLORS.gray,
+          }}
+        >
+          Loading pet data...
+        </Text>
+      </View>
+    );
+  }
+
   return (
     <View
       style={{
@@ -230,59 +313,32 @@ export default function CreatePet({ navigation }: { navigation: any }) {
               textAlign: 'center',
             }}
           >
-            Let’s start by creating portfolio for your pet!
+            Edit Pet Information
           </Text>
-          {payload?.map((item, index) => (
-            <View
-              key={index}
-              style={{
-                marginTop: normalize(20),
-                width: '100%',
-                flexDirection: 'column',
-                justifyContent: 'center',
-                alignItems: 'center',
-              }}
-            >
-              <View>
-                {item.photo ? (
+          <View
+            style={{
+              marginTop: normalize(20),
+              width: '100%',
+              flexDirection: 'column',
+              justifyContent: 'center',
+              alignItems: 'center',
+            }}
+          >
+            <View>
+              {pet.photo || pet.photoURL ? (
+                <View>
                   <Image
-                    source={{ uri: item.photo }}
-                    style={{ width: normalize(100), height: normalize(100) }}
+                    source={{
+                      uri: pet.photo || pet.photoURL,
+                    }}
+                    style={{
+                      width: normalize(100),
+                      height: normalize(100),
+                      borderRadius: normalize(50),
+                    }}
                   />
-                ) : (
-                  <TouchableOpacity onPress={() => handleImagePicker(index)}>
-                    <View
-                      style={{
-                        width: normalize(100),
-                        height: normalize(100),
-                        backgroundColor: COLORS.secondary,
-                        borderRadius: normalize(100),
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        marginTop: normalize(20),
-                        padding: normalize(20),
-                      }}
-                    >
-                      <Image
-                        source={require('../../assets/icons/camera.png')}
-                        style={{ width: normalize(40), height: normalize(40) }}
-                      />
-                    </View>
-                    <Text
-                      style={{
-                        fontSize: normalize(16),
-                        fontWeight: '400',
-                        color: COLORS.black,
-                        marginTop: normalize(10),
-                      }}
-                    >
-                      Upload Image
-                    </Text>
-                  </TouchableOpacity>
-                )}
-                {item.photo && (
                   <TouchableOpacity
-                    onPress={() => handleImagePicker(index)}
+                    onPress={handleImagePicker}
                     style={{ marginTop: normalize(10) }}
                   >
                     <Text
@@ -292,178 +348,191 @@ export default function CreatePet({ navigation }: { navigation: any }) {
                         textAlign: 'center',
                       }}
                     >
-                      Ubah Foto
+                      Change Photo
                     </Text>
                   </TouchableOpacity>
-                )}
+                </View>
+              ) : (
+                <TouchableOpacity onPress={handleImagePicker}>
+                  <View
+                    style={{
+                      width: normalize(100),
+                      height: normalize(100),
+                      backgroundColor: COLORS.secondary,
+                      borderRadius: normalize(100),
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      marginTop: normalize(20),
+                      padding: normalize(20),
+                    }}
+                  >
+                    <Image
+                      source={require('../../assets/icons/camera.png')}
+                      style={{ width: normalize(40), height: normalize(40) }}
+                    />
+                  </View>
+                  <Text
+                    style={{
+                      fontSize: normalize(16),
+                      fontWeight: '400',
+                      color: COLORS.black,
+                      marginTop: normalize(10),
+                    }}
+                  >
+                    Upload Image
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </View>
+            <View
+              style={{
+                width: '100%',
+                paddingHorizontal: normalize(20),
+                marginTop: normalize(20),
+                flexDirection: 'column',
+                gap: normalize(10),
+              }}
+            >
+              <Input
+                label="Name"
+                placeholder="Enter name"
+                value={pet.name}
+                onChangeText={value => handleChange('name', value)}
+                style={{ backgroundColor: COLORS.info }}
+              />
+              {/* Species Picker */}
+              <View>
+                <Text
+                  style={{
+                    marginBottom: normalize(4),
+                    fontWeight: '500',
+                    fontSize: normalize(16),
+                    color: COLORS.black,
+                  }}
+                >
+                  Species
+                </Text>
+                <TouchableOpacity
+                  onPress={() => setShowSpeciesPicker(true)}
+                  style={{
+                    backgroundColor: COLORS.info,
+                    paddingVertical: normalize(15),
+                    paddingHorizontal: normalize(15),
+                    borderRadius: normalize(4),
+                    borderWidth: 1,
+                    borderColor: COLORS.secondary,
+                  }}
+                >
+                  <Text
+                    style={{
+                      fontSize: normalize(16),
+                      color: pet.species ? COLORS.black : COLORS.gray,
+                    }}
+                  >
+                    {pet.species || 'Select species'}
+                  </Text>
+                </TouchableOpacity>
               </View>
-              <View
+
+              {/* Sex Picker */}
+              <View>
+                <Text
+                  style={{
+                    marginBottom: normalize(4),
+                    fontWeight: '500',
+                    fontSize: normalize(16),
+                    color: COLORS.black,
+                  }}
+                >
+                  Sex
+                </Text>
+                <TouchableOpacity
+                  onPress={() => setShowSexPicker(true)}
+                  style={{
+                    backgroundColor: COLORS.info,
+                    paddingVertical: normalize(15),
+                    paddingHorizontal: normalize(15),
+                    borderRadius: normalize(4),
+                    borderWidth: 1,
+                    borderColor: COLORS.secondary,
+                  }}
+                >
+                  <Text
+                    style={{
+                      fontSize: normalize(16),
+                      color: pet.gender ? COLORS.black : COLORS.gray,
+                    }}
+                  >
+                    {pet.gender || 'Select sex'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* Birthday Date Picker */}
+              <View>
+                <Text
+                  style={{
+                    marginBottom: normalize(4),
+                    fontWeight: '500',
+                    fontSize: normalize(16),
+                    color: COLORS.black,
+                  }}
+                >
+                  Birthday
+                </Text>
+                <TouchableOpacity
+                  onPress={() => setShowDatePicker(true)}
+                  style={{
+                    backgroundColor: COLORS.info,
+                    paddingVertical: normalize(15),
+                    paddingHorizontal: normalize(15),
+                    borderRadius: normalize(4),
+                    borderWidth: 1,
+                    borderColor: COLORS.secondary,
+                  }}
+                >
+                  <Text
+                    style={{
+                      fontSize: normalize(16),
+                      color: pet.birthday ? COLORS.black : COLORS.gray,
+                    }}
+                  >
+                    {pet.birthday
+                      ? formatDate(pet.birthday)
+                      : 'Select birthday'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+              <Input
+                label="Weight"
+                placeholder="Weight (kg)"
+                value={pet.weight}
+                onChangeText={value => handleChange('weight', value)}
+                style={{ backgroundColor: COLORS.info }}
+                keyboardType="numeric"
+              />
+              <Button
+                variant="success"
                 style={{
                   width: '100%',
-                  paddingHorizontal: normalize(20),
+                  height: normalize(50),
                   marginTop: normalize(20),
-                  flexDirection: 'column',
-                  gap: normalize(10),
+                  opacity: saving || uploading ? 0.6 : 1,
                 }}
+                onPress={handleSave}
+                disabled={saving || uploading}
               >
-                <Input
-                  label="Name"
-                  placeholder="Enter name"
-                  value={item.name}
-                  onChangeText={value => handleChange(index, 'name', value)}
-                  style={{ backgroundColor: COLORS.info }}
-                />
-                {/* Species Picker */}
-                <View>
-                  <Text
+                {saving || uploading ? (
+                  <View
                     style={{
-                      marginBottom: normalize(4),
-                      fontWeight: '500',
-                      fontSize: normalize(16),
-                      color: COLORS.black,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: normalize(10),
                     }}
                   >
-                    Species
-                  </Text>
-                  <TouchableOpacity
-                    onPress={() => {
-                      setCurrentIndex(index);
-                      setShowSpeciesPicker(true);
-                    }}
-                    style={{
-                      backgroundColor: COLORS.info,
-                      paddingVertical: normalize(15),
-                      paddingHorizontal: normalize(15),
-                      borderRadius: normalize(4),
-                      borderWidth: 1,
-                      borderColor: COLORS.secondary,
-                    }}
-                  >
-                    <Text
-                      style={{
-                        fontSize: normalize(16),
-                        color: item.species ? COLORS.black : COLORS.gray,
-                      }}
-                    >
-                      {item.species || 'Select species'}
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-
-                {/* Sex Picker */}
-                <View>
-                  <Text
-                    style={{
-                      marginBottom: normalize(4),
-                      fontWeight: '500',
-                      fontSize: normalize(16),
-                      color: COLORS.black,
-                    }}
-                  >
-                    Sex
-                  </Text>
-                  <TouchableOpacity
-                    onPress={() => {
-                      setCurrentIndex(index);
-                      setShowSexPicker(true);
-                    }}
-                    style={{
-                      backgroundColor: COLORS.info,
-                      paddingVertical: normalize(15),
-                      paddingHorizontal: normalize(15),
-                      borderRadius: normalize(4),
-                      borderWidth: 1,
-                      borderColor: COLORS.secondary,
-                    }}
-                  >
-                    <Text
-                      style={{
-                        fontSize: normalize(16),
-                        color: item.gender ? COLORS.black : COLORS.gray,
-                      }}
-                    >
-                      {item.gender || 'Select sex'}
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-
-                {/* Birthday Date Picker */}
-                <View>
-                  <Text
-                    style={{
-                      marginBottom: normalize(4),
-                      fontWeight: '500',
-                      fontSize: normalize(16),
-                      color: COLORS.black,
-                    }}
-                  >
-                    Birthday
-                  </Text>
-                  <TouchableOpacity
-                    onPress={() => {
-                      setCurrentIndex(index);
-                      setShowDatePicker(true);
-                    }}
-                    style={{
-                      backgroundColor: COLORS.info,
-                      paddingVertical: normalize(15),
-                      paddingHorizontal: normalize(15),
-                      borderRadius: normalize(4),
-                      borderWidth: 1,
-                      borderColor: COLORS.secondary,
-                    }}
-                  >
-                    <Text
-                      style={{
-                        fontSize: normalize(16),
-                        color: item.birthday ? COLORS.black : COLORS.gray,
-                      }}
-                    >
-                      {item.birthday
-                        ? formatDate(item.birthday)
-                        : 'Select birthday'}
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-                <Input
-                  label="Weight"
-                  placeholder="Weight (kg)"
-                  value={item.weight}
-                  onChangeText={value => handleChange(index, 'weight', value)}
-                  style={{ backgroundColor: COLORS.info }}
-                />
-                <Button
-                  variant="success"
-                  style={{
-                    width: '100%',
-                    height: normalize(50),
-                    marginTop: normalize(20),
-                    opacity: saving || uploading ? 0.6 : 1,
-                  }}
-                  onPress={handleCreatePet}
-                  disabled={saving || uploading}
-                >
-                  {saving || uploading ? (
-                    <View
-                      style={{
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: normalize(10),
-                      }}
-                    >
-                      <ActivityIndicator color={COLORS.white} size="small" />
-                      <Text
-                        style={{
-                          color: COLORS.white,
-                          fontSize: normalize(16),
-                          fontWeight: 'bold',
-                        }}
-                      >
-                        {uploading ? 'Uploading...' : 'Saving...'}
-                      </Text>
-                    </View>
-                  ) : (
+                    <ActivityIndicator color={COLORS.white} size="small" />
                     <Text
                       style={{
                         color: COLORS.white,
@@ -471,38 +540,67 @@ export default function CreatePet({ navigation }: { navigation: any }) {
                         fontWeight: 'bold',
                       }}
                     >
-                      SAVE
+                      {uploading ? 'Uploading...' : 'Saving...'}
                     </Text>
-                  )}
-                </Button>
-
-                {/* <TouchableOpacity
-                  onPress={() => navigation.navigate('Home')}
-                  style={{
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    flexDirection: 'row',
-                    gap: normalize(10),
-                    marginTop: normalize(30),
-                  }}
-                >
-                  <Image
-                    source={require('../../assets/icons/plus-circle.png')}
-                    style={{ width: normalize(20), height: normalize(20) }}
-                  />
+                  </View>
+                ) : (
                   <Text
                     style={{
+                      color: COLORS.white,
                       fontSize: normalize(16),
-                      fontWeight: '300',
-                      color: COLORS.black,
+                      fontWeight: 'bold',
                     }}
                   >
-                    Add another pet
+                    SAVE CHANGES
                   </Text>
-                </TouchableOpacity> */}
-              </View>
+                )}
+              </Button>
+
+              <Button
+                variant="danger"
+                style={{
+                  width: '100%',
+                  height: normalize(50),
+                  marginTop: normalize(20),
+                  opacity: deleting ? 0.6 : 1,
+                }}
+                onPress={handleDelete}
+                disabled={deleting}
+              >
+                {deleting ? (
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: normalize(10),
+                    }}
+                  >
+                    <ActivityIndicator color={COLORS.white} size="small" />
+                    <Text
+                      style={{
+                        color: COLORS.white,
+                        fontSize: normalize(16),
+                        fontWeight: 'bold',
+                      }}
+                    >
+                      Deleting...
+                    </Text>
+                  </View>
+                ) : (
+                  <Text
+                    style={{
+                      color: COLORS.white,
+                      fontSize: normalize(16),
+                      fontWeight: 'bold',
+                    }}
+                  >
+                    DELETE PET
+                  </Text>
+                )}
+              </Button>
             </View>
-          ))}
+          </View>
         </View>
       </ScrollView>
 
@@ -540,7 +638,7 @@ export default function CreatePet({ navigation }: { navigation: any }) {
               Select Species
             </Text>
             <TouchableOpacity
-              onPress={() => handleSpeciesSelect('cat', currentIndex)}
+              onPress={() => handleSpeciesSelect('cat')}
               style={{
                 padding: normalize(15),
                 backgroundColor: COLORS.info,
@@ -559,7 +657,7 @@ export default function CreatePet({ navigation }: { navigation: any }) {
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
-              onPress={() => handleSpeciesSelect('dog', currentIndex)}
+              onPress={() => handleSpeciesSelect('dog')}
               style={{
                 padding: normalize(15),
                 backgroundColor: COLORS.info,
@@ -635,7 +733,7 @@ export default function CreatePet({ navigation }: { navigation: any }) {
               Select Sex
             </Text>
             <TouchableOpacity
-              onPress={() => handleSexSelect('Male', currentIndex)}
+              onPress={() => handleSexSelect('Male')}
               style={{
                 padding: normalize(15),
                 backgroundColor: COLORS.info,
@@ -654,7 +752,7 @@ export default function CreatePet({ navigation }: { navigation: any }) {
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
-              onPress={() => handleSexSelect('Female', currentIndex)}
+              onPress={() => handleSexSelect('Female')}
               style={{
                 padding: normalize(15),
                 backgroundColor: COLORS.info,
@@ -762,9 +860,7 @@ export default function CreatePet({ navigation }: { navigation: any }) {
                 </View>
                 <DateTimePicker
                   value={
-                    payload[currentIndex]?.birthday
-                      ? new Date(payload[currentIndex].birthday)
-                      : new Date()
+                    pet.birthday ? new Date(pet.birthday) : new Date()
                   }
                   mode="date"
                   display="spinner"
@@ -777,11 +873,7 @@ export default function CreatePet({ navigation }: { navigation: any }) {
           )}
           {Platform.OS === 'android' && (
             <DateTimePicker
-              value={
-                payload[currentIndex]?.birthday
-                  ? new Date(payload[currentIndex].birthday)
-                  : new Date()
-              }
+              value={pet.birthday ? new Date(pet.birthday) : new Date()}
               mode="date"
               display="default"
               onChange={handleDateChange}
@@ -793,3 +885,4 @@ export default function CreatePet({ navigation }: { navigation: any }) {
     </View>
   );
 }
+

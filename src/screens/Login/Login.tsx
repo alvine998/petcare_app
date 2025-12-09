@@ -27,9 +27,11 @@ export default function Login({ navigation }: { navigation: any }) {
     try {
       await signInWithEmail(email, password);
       ToastAndroid.show('Login successful', ToastAndroid.SHORT);
-      const hasOnboarded = await AsyncStorage.getItem('hasOnboardedPermissions');
+      const hasOnboarded = await AsyncStorage.getItem(
+        'hasOnboardedPermissions',
+      );
       if (hasOnboarded === 'true') {
-        navigation.navigate('Home');
+        navigation.navigate('MainTabs');
       } else {
         navigation.navigate('EnableLocation');
       }
@@ -42,9 +44,11 @@ export default function Login({ navigation }: { navigation: any }) {
     try {
       await signInWithGoogle();
       ToastAndroid.show('Login with Google successful', ToastAndroid.SHORT);
-      const hasOnboarded = await AsyncStorage.getItem('hasOnboardedPermissions');
+      const hasOnboarded = await AsyncStorage.getItem(
+        'hasOnboardedPermissions',
+      );
       if (hasOnboarded === 'true') {
-        navigation.navigate('Home');
+        navigation.navigate('MainTabs');
       } else {
         navigation.navigate('EnableLocation');
       }
@@ -97,6 +101,24 @@ export default function Login({ navigation }: { navigation: any }) {
             secureTextEntry={true}
             style={{ backgroundColor: COLORS.secondary }}
           />
+          <TouchableOpacity
+            onPress={() => navigation.navigate('Register')}
+            style={{
+              alignItems: 'flex-end',
+              justifyContent: 'flex-end',
+              marginTop: normalize(10),
+            }}
+          >
+            <Text
+              style={{
+                color: COLORS.blue1,
+                fontSize: normalize(14),
+                textAlign: 'right',
+              }}
+            >
+              Not have an account? Register
+            </Text>
+          </TouchableOpacity>
           <TouchableOpacity
             onPress={() => navigation.navigate('ForgotPassword')}
             style={{

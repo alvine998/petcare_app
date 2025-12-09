@@ -1,10 +1,9 @@
 import { View, Text, ScrollView } from 'react-native';
 import React from 'react';
 import normalize from 'react-native-normalize';
-import { COLORS } from '../../../config/color';
-import BackButton from '../../../components/BackButton';
+import { COLORS } from '../../config/color';
 
-export default function GroomingPlan({ navigation }: { navigation: any }) {
+export default function Chat() {
   return (
     <View
       style={{
@@ -14,10 +13,6 @@ export default function GroomingPlan({ navigation }: { navigation: any }) {
         padding: normalize(20),
       }}
     >
-      <View style={{ alignItems: 'flex-start', justifyContent: 'flex-start' }}>
-        <BackButton onPress={() => navigation.goBack()} />
-      </View>
-
       <View style={{ marginTop: normalize(30), alignItems: 'center' }}>
         <Text
           style={{
@@ -27,7 +22,7 @@ export default function GroomingPlan({ navigation }: { navigation: any }) {
             textAlign: 'center',
           }}
         >
-          Grooming
+          Chat
         </Text>
       </View>
 
@@ -51,7 +46,7 @@ export default function GroomingPlan({ navigation }: { navigation: any }) {
               marginBottom: normalize(5),
             }}
           >
-            Grooming Services
+            Messages
           </Text>
           <Text
             style={{
@@ -59,7 +54,7 @@ export default function GroomingPlan({ navigation }: { navigation: any }) {
               color: COLORS.gray,
             }}
           >
-            Book professional grooming services for your pet.
+            No messages yet. Start a conversation with other pet owners.
           </Text>
         </View>
       </ScrollView>
