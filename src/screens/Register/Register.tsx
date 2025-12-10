@@ -170,7 +170,7 @@ export default function Register({ navigation }: { navigation: any }) {
           </Button>
 
           <TouchableOpacity
-            onPress={() => navigation.navigate('Home')}
+            onPress={() => navigation.navigate('MainTabs', { screen: 'Home' })}
             style={{
               alignItems: 'center',
               justifyContent: 'center',

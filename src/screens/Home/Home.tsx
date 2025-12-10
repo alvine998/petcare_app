@@ -9,6 +9,7 @@ import {
   Platform,
   ToastAndroid,
   TextInput,
+  Alert,
 } from 'react-native';
 import React, { useEffect, useState, useCallback } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
@@ -623,7 +624,14 @@ export default function Home({ navigation }: { navigation: any }) {
               <TouchableOpacity
                 key={service.id}
                 onPress={() => {
-                  if (service.navigation === 'Find') {
+                  if (service.navigation === 'Activity' || service.navigation === 'Networking') {
+                    // Show coming soon toast
+                    if (Platform.OS === 'android') {
+                      ToastAndroid.show('Coming Soon', ToastAndroid.SHORT);
+                    } else {
+                      Alert.alert('Coming Soon', 'This feature will be available soon');
+                    }
+                  } else if (service.navigation === 'Find') {
                     // Navigate to MainTabs with Find screen
                     navigation.navigate('MainTabs', { screen: 'Find' });
                   } else {

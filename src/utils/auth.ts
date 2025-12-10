@@ -1,6 +1,6 @@
-import { Alert, ToastAndroid } from 'react-native';
+import { Alert, ToastAndroid, Platform } from 'react-native';
 import { auth, GoogleSignin } from '../config/firebase';
-import firestore from '@react-native-firebase/firestore';
+import firestore, { FirebaseFirestoreTypes } from '@react-native-firebase/firestore';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Function to save user session to AsyncStorage
@@ -27,17 +27,27 @@ export const signUpWithEmail = async (
     const result = await auth().createUserWithEmailAndPassword(email, password);
     const user = result.user;
 
-    // Optional: save additional profile data to Firestore
+    // Save additional profile data to Firestore
     if (user && profile) {
-      await firestore().collection('users').doc(user.uid).set(
-        {
-          email: user.email,
-          firstName: profile.firstName ?? '',
-          lastName: profile.lastName ?? '',
-          createdAt: firestore.FieldValue.serverTimestamp(),
-        },
-        { merge: true },
-      );
+      try {
+        // Use Timestamp.now() directly instead of serverTimestamp() to avoid issues
+        await firestore().collection('users').doc(user.uid).set(
+          {
+            email: user.email,
+            firstName: profile.firstName ?? '',
+            lastName: profile.lastName ?? '',
+            createdAt: firestore.Timestamp.now(),
+            updatedAt: firestore.Timestamp.now(),
+          },
+          { merge: true },
+        );
+        console.log('User data saved to Firestore successfully');
+      } catch (firestoreError: any) {
+        // Log error but don't block registration
+        console.error('Firestore error saving user data:', firestoreError);
+        // Registration still succeeds even if Firestore save fails
+        // Data will be saved later when fcmToken is saved
+      }
     }
 
     // Save user session to AsyncStorage after register
@@ -80,18 +90,91 @@ export const signOut = async () => {
 
 export const signInWithGoogle = async () => {
   try {
-    await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
-    const { idToken } = await GoogleSignin.signIn();
+    // Check if Google Play Services is available (Android only)
+    if (Platform.OS === 'android') {
+      try {
+        await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+      } catch (playServicesError: any) {
+        throw new Error('Google Play Services is required for Google Sign-In. Please install or update Google Play Services.');
+      }
+    }
+    
+    // Sign in with Google
+    let signInResult;
+    try {
+      signInResult = await GoogleSignin.signIn();
+    } catch (signInError: any) {
+      // Check for configuration errors
+      if (signInError.message && (signInError.message.includes('configure') || signInError.message.includes('apiClient is null'))) {
+        throw new Error('Google Sign-In is not configured. Please set webClientId in src/config/firebase.ts');
+      }
+      throw signInError;
+    }
+    
+    if (!signInResult || !signInResult.idToken) {
+      throw new Error('Failed to get ID token from Google Sign-In. Please check your configuration.');
+    }
+    
+    const { idToken } = signInResult;
+    
+    // Create credential and sign in
     const googleCredential = auth.GoogleAuthProvider.credential(idToken);
     const result = await auth().signInWithCredential(googleCredential);
     const user = result.user;
+    
+    // Save user data to Firestore if needed
+    if (user) {
+      try {
+        const userDoc = await firestore().collection('users').doc(user.uid).get();
+        if (!userDoc.exists) {
+          // Create user document if it doesn't exist
+          const displayName = user.displayName || '';
+          const nameParts = displayName.split(' ');
+          // Use Timestamp.now() directly instead of serverTimestamp() to avoid issues
+          await firestore().collection('users').doc(user.uid).set(
+            {
+              email: user.email,
+              firstName: nameParts[0] || '',
+              lastName: nameParts.slice(1).join(' ') || '',
+              createdAt: firestore.Timestamp.now(),
+              updatedAt: firestore.Timestamp.now(),
+            },
+            { merge: true },
+          );
+          console.log('User data saved to Firestore successfully');
+        } else {
+          // Update existing document with latest email if changed
+          const existingData = userDoc.data();
+          if (existingData?.email !== user.email) {
+            await firestore().collection('users').doc(user.uid).set(
+              {
+                email: user.email,
+                updatedAt: firestore.Timestamp.now(),
+              },
+              { merge: true },
+            );
+          }
+        }
+      } catch (firestoreError: any) {
+        // If Firestore fails, log but don't block sign-in
+        console.error('Firestore error saving user data:', firestoreError);
+        // Sign-in still succeeds even if Firestore save fails
+        // Data will be saved later when fcmToken is saved
+      }
+    }
+    
     // Save user session to AsyncStorage
     await saveUserSession(user);
     return user;
   } catch (error: any) {
-    console.log('signInWithGoogle error', error);
-    // Alert.alert('Google Sign-In failed', error.message ?? 'Something went wrong');
-    ToastAndroid.show(error.message ?? 'Something went wrong', ToastAndroid.LONG);
+    console.log('signInWithGoogle error:', error);
+    const errorMessage = error.message || 'Google Sign-In failed. Please check your configuration.';
+    
+    if (Platform.OS === 'android') {
+      ToastAndroid.show(errorMessage, ToastAndroid.LONG);
+    } else {
+      Alert.alert('Google Sign-In failed', errorMessage);
+    }
     throw error;
   }
 };

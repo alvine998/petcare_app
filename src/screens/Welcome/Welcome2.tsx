@@ -108,11 +108,11 @@ export default function Welcome2({ navigation }: { navigation: any }) {
             marginTop: normalize(20),
           }}
         >
-          Trouble singing in?
+          Trouble signing in?
         </Text>
 
         <TouchableOpacity
-          onPress={() => navigation.navigate('Home')}
+          onPress={() => navigation.navigate('MainTabs', { screen: 'Home' })}
           style={{
             alignItems: 'center',
             justifyContent: 'center',

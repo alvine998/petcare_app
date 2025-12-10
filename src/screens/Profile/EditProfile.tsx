@@ -16,6 +16,8 @@ import { Button } from '../../components/Button';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { auth } from '../../config/firebase';
 import firestore from '@react-native-firebase/firestore';
+import { signOut } from '../../utils/auth';
+import { Platform } from 'react-native';
 
 export default function EditProfile({ navigation }: { navigation: any }) {
   const [firstName, setFirstName] = useState('');
@@ -117,6 +119,39 @@ export default function EditProfile({ navigation }: { navigation: any }) {
   const handleChangePhoto = () => {
     // TODO: Implement image picker
     Alert.alert('Info', 'Photo upload feature will be available soon');
+  };
+
+  const handleLogout = async () => {
+    Alert.alert(
+      'Logout',
+      'Are you sure you want to logout?',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Logout',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await signOut();
+              if (Platform.OS === 'android') {
+                ToastAndroid.show('Logged out successfully', ToastAndroid.SHORT);
+              }
+              // Navigate to Splash which will redirect to Welcome1
+              navigation.reset({
+                index: 0,
+                routes: [{ name: 'Splash' }],
+              });
+            } catch (error: any) {
+              Alert.alert('Error', error.message || 'Failed to logout');
+            }
+          },
+        },
+      ],
+      { cancelable: true },
+    );
   };
 
   return (
@@ -251,6 +286,32 @@ export default function EditProfile({ navigation }: { navigation: any }) {
                 {loading ? 'Saving...' : 'SAVE CHANGES'}
               </Text>
             </Button>
+
+            <TouchableOpacity
+              onPress={handleLogout}
+              style={{
+                width: '100%',
+                height: normalize(50),
+                marginTop: normalize(20),
+                backgroundColor: COLORS.danger,
+                borderRadius: normalize(10),
+                alignItems: 'center',
+                justifyContent: 'center',
+                borderWidth: 1,
+                borderColor: COLORS.black,
+                elevation: 2,
+              }}
+            >
+              <Text
+                style={{
+                  color: COLORS.white,
+                  fontSize: normalize(16),
+                  fontWeight: 'bold',
+                }}
+              >
+                LOGOUT
+              </Text>
+            </TouchableOpacity>
           </View>
         </View>
       </ScrollView>
