@@ -39,9 +39,9 @@ export default function Splash({ navigation }: { navigation: any }) {
         }, 1000);
       } catch (e) {
         // If there's an error, fallback to Welcome1
-        setTimeout(() => {
+    setTimeout(() => {
           navigation.replace('Welcome1');
-        }, 1000);
+    }, 1000);
       }
     });
 

@@ -28,6 +28,10 @@ import GroomingSuccess from './src/screens/Pet/Grooming/GroomingSuccess';
 import BoardingPlan from './src/screens/Pet/PetBoarding/BoardingPlan';
 import BoardingBookingForm from './src/screens/Pet/PetBoarding/BoardingBookingForm';
 import BoardingPayment from './src/screens/Pet/PetBoarding/BoardingPayment';
+import BoardingSuccess from './src/screens/Pet/PetBoarding/BoardingSuccess';
+import AppointmentRequest from './src/screens/Find/AppointmentRequest';
+import AppointmentSuccess from './src/screens/Find/AppointmentSuccess';
+import ArticleDetail from './src/screens/Chat/ArticleDetail';
 
 enableScreens(true);
 
@@ -57,6 +61,10 @@ export type RootStackParamList = {
   BoardingPlan: { petId: string };
   BoardingBookingForm: { petId: string; roomId: number; roomType: string; petType: string; price: number };
   BoardingPayment: { petId: string; roomId: number; bookingData?: any };
+  BoardingSuccess: { petId: string; roomId: number; bookingData?: any; paymentMethod?: string; totalPrice?: number };
+  AppointmentRequest: { location?: any };
+  AppointmentSuccess: { location?: any; appointmentDate?: any; appointmentTime?: any };
+  ArticleDetail: { article?: any };
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -100,6 +108,10 @@ export default function App() {
         <Stack.Screen name="BoardingPlan" component={BoardingPlan} />
         <Stack.Screen name="BoardingBookingForm" component={BoardingBookingForm} />
         <Stack.Screen name="BoardingPayment" component={BoardingPayment} />
+        <Stack.Screen name="BoardingSuccess" component={BoardingSuccess} />
+        <Stack.Screen name="AppointmentRequest" component={AppointmentRequest} />
+        <Stack.Screen name="AppointmentSuccess" component={AppointmentSuccess} />
+        <Stack.Screen name="ArticleDetail" component={ArticleDetail} />
       </Stack.Navigator>
     </NavigationContainer>
   );

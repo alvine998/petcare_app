@@ -468,15 +468,15 @@ export default function CreatePet({ navigation }: { navigation: any }) {
                       </Text>
                     </View>
                   ) : (
-                    <Text
-                      style={{
-                        color: COLORS.white,
-                        fontSize: normalize(16),
-                        fontWeight: 'bold',
-                      }}
-                    >
-                      SAVE
-                    </Text>
+                  <Text
+                    style={{
+                      color: COLORS.white,
+                      fontSize: normalize(16),
+                      fontWeight: 'bold',
+                    }}
+                  >
+                    SAVE
+                  </Text>
                   )}
                 </Button>
 

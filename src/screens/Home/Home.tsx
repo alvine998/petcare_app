@@ -46,7 +46,7 @@ export default function Home({ navigation }: { navigation: any }) {
       id: 4,
       name: 'Location',
       icon: require('../../assets/images/pin-map-white.png'),
-      navigation: 'Location',
+      navigation: 'Find',
     },
   ]);
   const [user, setUser] = useState();
@@ -622,7 +622,14 @@ export default function Home({ navigation }: { navigation: any }) {
             {services.map(service => (
               <TouchableOpacity
                 key={service.id}
-                onPress={() => navigation.navigate(service.navigation)}
+                onPress={() => {
+                  if (service.navigation === 'Find') {
+                    // Navigate to MainTabs with Find screen
+                    navigation.navigate('MainTabs', { screen: 'Find' });
+                  } else {
+                    navigation.navigate(service.navigation);
+                  }
+                }}
                 style={{
                   justifyContent: 'center',
                   alignItems: 'center',
