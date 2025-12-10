@@ -17,22 +17,13 @@ export const configureFirebase = () => {
   // Jika tidak diisi dengan benar, Google Sign-In akan gagal dengan error "Developer Error" atau "apiClient is null"
   const webClientId = '391388815238-k7tl38g3ed9gtcbad8m7dj9r6jtqn0c9.apps.googleusercontent.com';
   
-  // Always configure GoogleSignin, even if webClientId is placeholder
+  // Always configure GoogleSignin
   // This prevents "apiClient is null" error
   try {
-    if (webClientId && !webClientId.includes('391388815238-k7tl38g3ed9gtcbad8m7dj9r6jtqn0c9.apps.googleusercontent.com')) {
-      GoogleSignin.configure({
-        webClientId: webClientId,
-      });
-      console.log('Google Sign-In configured successfully');
-    } else {
-      // Configure with a placeholder to prevent null error, but it won't work for actual sign-in
-      GoogleSignin.configure({
-        webClientId: '391388815238-k7tl38g3ed9gtcbad8m7dj9r6jtqn0c9.apps.googleusercontent.com',
-      });
-      console.warn('⚠️ Google Sign-In is using placeholder webClientId. Please set your actual Web Client ID in src/config/firebase.ts');
-      console.warn('   Google Sign-In will not work until you configure the correct webClientId');
-    }
+    GoogleSignin.configure({
+      webClientId: webClientId,
+    });
+    console.log('Google Sign-In configured with webClientId:', webClientId);
   } catch (error) {
     console.error('Error configuring Google Sign-In:', error);
   }

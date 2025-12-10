@@ -24,8 +24,13 @@ export const signUpWithEmail = async (
   profile?: { firstName?: string; lastName?: string },
 ) => {
   try {
+    // Always create new user account
+    // Firebase will automatically throw error if email already exists (auth/email-already-in-use)
+    // This ensures we always create a new user, never reuse existing accounts
     const result = await auth().createUserWithEmailAndPassword(email, password);
     const user = result.user;
+    
+    console.log('New user created:', user.uid, user.email);
 
     // Save additional profile data to Firestore
     if (user && profile) {
@@ -104,10 +109,26 @@ export const signInWithGoogle = async () => {
     try {
       signInResult = await GoogleSignin.signIn();
     } catch (signInError: any) {
+      console.error('GoogleSignin.signIn() error:', signInError);
+      
+      // Check for specific error codes
+      if (signInError.code === '10' || signInError.message?.includes('DEVELOPER_ERROR') || signInError.message?.includes('Developer_error')) {
+        throw new Error(
+          'Developer Error: Please check:\n' +
+          '1. SHA-1 key from your real device is added to Firebase Console\n' +
+          '2. Package name matches in Firebase Console\n' +
+          '3. OAuth consent screen is configured in Google Cloud Console\n' +
+          '4. Web Client ID is correct in firebase.ts\n\n' +
+          'To get SHA-1 from real device:\n' +
+          'keytool -list -v -keystore android/app/debug.keystore -alias androiddebugkey -storepass android -keypass android'
+        );
+      }
+      
       // Check for configuration errors
       if (signInError.message && (signInError.message.includes('configure') || signInError.message.includes('apiClient is null'))) {
         throw new Error('Google Sign-In is not configured. Please set webClientId in src/config/firebase.ts');
       }
+      
       throw signInError;
     }
     
@@ -167,8 +188,24 @@ export const signInWithGoogle = async () => {
     await saveUserSession(user);
     return user;
   } catch (error: any) {
-    console.log('signInWithGoogle error:', error);
-    const errorMessage = error.message || 'Google Sign-In failed. Please check your configuration.';
+    console.error('signInWithGoogle error:', error);
+    console.error('Error code:', error.code);
+    console.error('Error message:', error.message);
+    
+    let errorMessage = 'Google Sign-In failed. Please check your configuration.';
+    
+    // Handle specific error codes
+    if (error.code === '10' || error.message?.includes('DEVELOPER_ERROR') || error.message?.includes('Developer_error')) {
+      errorMessage = 
+        'Developer Error: SHA-1 key dari device real belum terdaftar di Firebase Console.\n\n' +
+        'Cara mendapatkan SHA-1:\n' +
+        '1. cd android && ./gradlew signingReport\n' +
+        '2. Copy SHA-1 dari output\n' +
+        '3. Tambahkan di Firebase Console > Project Settings > Your apps > Android app > Add fingerprint\n\n' +
+        'Lihat GOOGLE_SIGNIN_SETUP.md untuk detail lengkap.';
+    } else if (error.message) {
+      errorMessage = error.message;
+    }
     
     if (Platform.OS === 'android') {
       ToastAndroid.show(errorMessage, ToastAndroid.LONG);
