@@ -19,8 +19,15 @@ import EditPet from './src/screens/Pet/EditPet';
 import BottomTabs from './src/navigation/BottomTabs';
 import ListInformation from './src/screens/Pet/ListInformation';
 import PetVaccination from './src/screens/Pet/Vaccination/PetVaccination';
+import PastVaccinations from './src/screens/Pet/Vaccination/PastVaccinations';
+import VaccinationDetail from './src/screens/Pet/Vaccination/VaccinationDetail';
 import GroomingPlan from './src/screens/Pet/Grooming/GroomingPlan';
+import InputFormGrooming from './src/screens/Pet/Grooming/InputFormGrooming';
+import GroomingPayment from './src/screens/Pet/Grooming/GroomingPayment';
+import GroomingSuccess from './src/screens/Pet/Grooming/GroomingSuccess';
 import BoardingPlan from './src/screens/Pet/PetBoarding/BoardingPlan';
+import BoardingBookingForm from './src/screens/Pet/PetBoarding/BoardingBookingForm';
+import BoardingPayment from './src/screens/Pet/PetBoarding/BoardingPayment';
 
 enableScreens(true);
 
@@ -40,9 +47,16 @@ export type RootStackParamList = {
   AllPets: undefined;
   EditPet: { petId: string };
   ListInformation: undefined;
-  PetVaccination: undefined;
-  GroomingPlan: undefined;
-  BoardingPlan: undefined;
+  PetVaccination: { petId: string };
+  PastVaccinations: { petId: string };
+  VaccinationDetail: { petId: string; vaccinationId: string; vaccination?: any };
+  GroomingPlan: { petId: string };
+  InputFormGrooming: { petId: string; planId: number };
+  GroomingPayment: { petId: string; planId: number; bookingData?: any };
+  GroomingSuccess: { petId: string; planId: number; bookingData?: any; paymentMethod?: string; totalCost?: number };
+  BoardingPlan: { petId: string };
+  BoardingBookingForm: { petId: string; roomId: number; roomType: string; petType: string; price: number };
+  BoardingPayment: { petId: string; roomId: number; bookingData?: any };
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -77,8 +91,15 @@ export default function App() {
         <Stack.Screen name="EditPet" component={EditPet} />
         <Stack.Screen name="ListInformation" component={ListInformation} />
         <Stack.Screen name="PetVaccination" component={PetVaccination} />
+        <Stack.Screen name="PastVaccinations" component={PastVaccinations} />
+        <Stack.Screen name="VaccinationDetail" component={VaccinationDetail} />
         <Stack.Screen name="GroomingPlan" component={GroomingPlan} />
+        <Stack.Screen name="InputFormGrooming" component={InputFormGrooming} />
+        <Stack.Screen name="GroomingPayment" component={GroomingPayment} />
+        <Stack.Screen name="GroomingSuccess" component={GroomingSuccess} />
         <Stack.Screen name="BoardingPlan" component={BoardingPlan} />
+        <Stack.Screen name="BoardingBookingForm" component={BoardingBookingForm} />
+        <Stack.Screen name="BoardingPayment" component={BoardingPayment} />
       </Stack.Navigator>
     </NavigationContainer>
   );

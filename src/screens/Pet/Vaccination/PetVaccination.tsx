@@ -1,10 +1,13 @@
-import { View, Text, ScrollView } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
 import React from 'react';
 import normalize from 'react-native-normalize';
 import { COLORS } from '../../../config/color';
 import BackButton from '../../../components/BackButton';
+import BottomTabsBar from '../../../components/BottomTabsBar';
 
-export default function PetVaccination({ navigation }: { navigation: any }) {
+export default function PetVaccination({ navigation, route }: { navigation: any; route: any }) {
+  const petId = route?.params?.petId;
+
   return (
     <View
       style={{
@@ -34,8 +37,10 @@ export default function PetVaccination({ navigation }: { navigation: any }) {
       <ScrollView
         style={{ marginTop: normalize(30) }}
         showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: normalize(100) }}
       >
-        <View
+        <TouchableOpacity
+          onPress={() => navigation.navigate('PastVaccinations', { petId: petId })}
           style={{
             padding: normalize(20),
             backgroundColor: COLORS.info,
@@ -51,7 +56,7 @@ export default function PetVaccination({ navigation }: { navigation: any }) {
               marginBottom: normalize(5),
             }}
           >
-            Pet Vaccination Information
+            Past Vaccinations
           </Text>
           <Text
             style={{
@@ -59,10 +64,11 @@ export default function PetVaccination({ navigation }: { navigation: any }) {
               color: COLORS.gray,
             }}
           >
-            Manage your pet's vaccination schedule and records.
+            View your pet's vaccination history and records.
           </Text>
-        </View>
+        </TouchableOpacity>
       </ScrollView>
+      <BottomTabsBar />
     </View>
   );
 }

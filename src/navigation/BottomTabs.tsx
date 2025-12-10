@@ -7,6 +7,7 @@ import Home from '../screens/Home/Home';
 import Find from '../screens/Find/Find';
 import Info from '../screens/Info/Info';
 import Chat from '../screens/Chat/Chat';
+import ListInformation from '../screens/Pet/ListInformation';
 
 const Tab = createBottomTabNavigator();
 
@@ -80,7 +81,7 @@ export default function BottomTabs() {
       />
       <Tab.Screen
         name="Info"
-        component={Info}
+        component={ListInformation}
         options={{
           tabBarLabel: '',
           tabBarIcon: ({ focused }) => (

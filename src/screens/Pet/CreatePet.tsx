@@ -14,6 +14,7 @@ import React, { useState } from 'react';
 import normalize from 'react-native-normalize';
 import { COLORS } from '../../config/color';
 import BackButton from '../../components/BackButton';
+import BottomTabsBar from '../../components/BottomTabsBar';
 import { Input } from '../../components/Input';
 import { Button } from '../../components/Button';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -215,7 +216,10 @@ export default function CreatePet({ navigation }: { navigation: any }) {
         padding: normalize(20),
       }}
     >
-      <ScrollView>
+      <ScrollView
+        contentContainerStyle={{ paddingBottom: normalize(80) }}
+        showsVerticalScrollIndicator={false}
+      >
         <View
           style={{ alignItems: 'flex-start', justifyContent: 'flex-start' }}
         >
@@ -790,6 +794,7 @@ export default function CreatePet({ navigation }: { navigation: any }) {
           )}
         </>
       )}
+      <BottomTabsBar />
     </View>
   );
 }

@@ -14,6 +14,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import normalize from 'react-native-normalize';
 import { COLORS } from '../../config/color';
 import BackButton from '../../components/BackButton';
+import BottomTabsBar from '../../components/BottomTabsBar';
 import { auth, storage } from '../../config/firebase';
 import firestore from '@react-native-firebase/firestore';
 import Icon from 'react-native-vector-icons/FontAwesome';
@@ -201,6 +202,7 @@ export default function AllPets({ navigation }: { navigation: any }) {
           <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
         }
         showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: normalize(100) }}
       >
         {/* Add Pet Button */}
         <TouchableOpacity
@@ -479,6 +481,7 @@ export default function AllPets({ navigation }: { navigation: any }) {
           </View>
         )}
       </ScrollView>
+      <BottomTabsBar />
     </View>
   );
 }
