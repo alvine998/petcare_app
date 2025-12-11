@@ -24,6 +24,16 @@ export default function Home({ navigation }: { navigation: any }) {
   const [refreshing, setRefreshing] = useState(false);
   const [yourPets, setYourPets] = useState<any[]>([]);
   const [loadingPets, setLoadingPets] = useState(false);
+
+  // Check if user is admin
+  useFocusEffect(
+    useCallback(() => {
+      const currentUser = auth().currentUser;
+      if (currentUser?.email === 'admin@petcare.com') {
+        navigation.replace('AdminHome');
+      }
+    }, [navigation]),
+  );
   const [services, setServices] = useState([
     {
       id: 1,

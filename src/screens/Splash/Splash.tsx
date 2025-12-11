@@ -28,8 +28,13 @@ export default function Splash({ navigation }: { navigation: any }) {
           'hasOnboardedPermissions',
         );
 
+        // Check if user is admin
+        const isAdmin = user?.email === 'admin@petcare.com';
+        
         const targetScreen = user
-          ? hasOnboarded === 'true'
+          ? isAdmin
+            ? 'AdminHome'
+            : hasOnboarded === 'true'
             ? 'MainTabs'
             : 'EnableLocation'
           : 'Welcome1';

@@ -33,6 +33,15 @@ import AppointmentRequest from './src/screens/Find/AppointmentRequest';
 import AppointmentSuccess from './src/screens/Find/AppointmentSuccess';
 import ArticleDetail from './src/screens/Chat/ArticleDetail';
 import Activity from './src/screens/Activity/Activity';
+import AdminHome from './src/screens/Admin/AdminHome';
+import ListUsers from './src/screens/Admin/ListUsers';
+import ListPets from './src/screens/Admin/ListPets';
+import ListGroomingBookings from './src/screens/Admin/ListGroomingBookings';
+import ListBoardingBookings from './src/screens/Admin/ListBoardingBookings';
+import ListPendingBookings from './src/screens/Admin/ListPendingBookings';
+import ListPetcareLocations from './src/screens/Admin/ListPetcareLocations';
+import AddPetcareLocation from './src/screens/Admin/AddPetcareLocation';
+import EditPetcareLocation from './src/screens/Admin/EditPetcareLocation';
 
 enableScreens(true);
 
@@ -67,6 +76,15 @@ export type RootStackParamList = {
   AppointmentSuccess: { location?: any; appointmentDate?: any; appointmentTime?: any };
   ArticleDetail: { article?: any };
   Activity: undefined;
+  AdminHome: undefined;
+  ListUsers: undefined;
+  ListPets: undefined;
+  ListGroomingBookings: undefined;
+  ListBoardingBookings: undefined;
+  ListPendingBookings: undefined;
+  ListPetcareLocations: undefined;
+  AddPetcareLocation: undefined;
+  EditPetcareLocation: { locationId: string };
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -115,6 +133,15 @@ export default function App() {
         <Stack.Screen name="AppointmentSuccess" component={AppointmentSuccess} />
         <Stack.Screen name="ArticleDetail" component={ArticleDetail} />
         <Stack.Screen name="Activity" component={Activity} />
+        <Stack.Screen name="AdminHome" component={AdminHome} />
+        <Stack.Screen name="ListUsers" component={ListUsers} />
+        <Stack.Screen name="ListPets" component={ListPets} />
+        <Stack.Screen name="ListGroomingBookings" component={ListGroomingBookings} />
+        <Stack.Screen name="ListBoardingBookings" component={ListBoardingBookings} />
+        <Stack.Screen name="ListPendingBookings" component={ListPendingBookings} />
+        <Stack.Screen name="ListPetcareLocations" component={ListPetcareLocations} />
+        <Stack.Screen name="AddPetcareLocation" component={AddPetcareLocation} />
+        <Stack.Screen name="EditPetcareLocation" component={EditPetcareLocation} />
       </Stack.Navigator>
     </NavigationContainer>
   );
