@@ -32,6 +32,7 @@ import BoardingSuccess from './src/screens/Pet/PetBoarding/BoardingSuccess';
 import AppointmentRequest from './src/screens/Find/AppointmentRequest';
 import AppointmentSuccess from './src/screens/Find/AppointmentSuccess';
 import ArticleDetail from './src/screens/Chat/ArticleDetail';
+import Activity from './src/screens/Activity/Activity';
 
 enableScreens(true);
 
@@ -65,6 +66,7 @@ export type RootStackParamList = {
   AppointmentRequest: { location?: any };
   AppointmentSuccess: { location?: any; appointmentDate?: any; appointmentTime?: any };
   ArticleDetail: { article?: any };
+  Activity: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -112,6 +114,7 @@ export default function App() {
         <Stack.Screen name="AppointmentRequest" component={AppointmentRequest} />
         <Stack.Screen name="AppointmentSuccess" component={AppointmentSuccess} />
         <Stack.Screen name="ArticleDetail" component={ArticleDetail} />
+        <Stack.Screen name="Activity" component={Activity} />
       </Stack.Navigator>
     </NavigationContainer>
   );

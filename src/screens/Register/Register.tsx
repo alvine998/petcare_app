@@ -1,4 +1,4 @@
-import { View, Text, Alert, TouchableOpacity, Image, ToastAndroid } from 'react-native';
+import { View, Text, Alert, TouchableOpacity, Image, ToastAndroid, ActivityIndicator } from 'react-native';
 import React, { useState } from 'react';
 import normalize from 'react-native-normalize';
 import { COLORS } from '../../config/color';
@@ -13,12 +13,21 @@ export default function Register({ navigation }: { navigation: any }) {
   const [password, setPassword] = useState('');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
 
   const handleRegister = async () => {
     if (!email || !password || !firstName || !lastName) {
       Alert.alert('Error', 'Please fill all fields');
       return;
     }
+    
+    if (password.length < 8) {
+      Alert.alert('Error', 'Password must be at least 8 characters long');
+      return;
+    }
+    
+    setLoading(true);
     try {
       await signUpWithEmail(email, password, {
         firstName,
@@ -33,10 +42,13 @@ export default function Register({ navigation }: { navigation: any }) {
       }
     } catch (e) {
       // errors are already alerted in auth util
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleGoogleRegister = async () => {
+    setGoogleLoading(true);
     try {
       await signInWithGoogle();
       const hasOnboarded = await AsyncStorage.getItem('hasOnboardedPermissions');
@@ -47,6 +59,8 @@ export default function Register({ navigation }: { navigation: any }) {
       }
     } catch (e) {
       // errors are already alerted in auth util
+    } finally {
+      setGoogleLoading(false);
     }
   };
   return (
@@ -116,16 +130,21 @@ export default function Register({ navigation }: { navigation: any }) {
               marginTop: normalize(20),
             }}
             onPress={handleRegister}
+            disabled={loading}
           >
-            <Text
-              style={{
-                color: COLORS.white,
-                fontSize: normalize(16),
-                fontWeight: 'bold',
-              }}
-            >
-              CREATE ACCOUNT
-            </Text>
+            {loading ? (
+              <ActivityIndicator size="small" color={COLORS.white} />
+            ) : (
+              <Text
+                style={{
+                  color: COLORS.white,
+                  fontSize: normalize(16),
+                  fontWeight: 'bold',
+                }}
+              >
+                CREATE ACCOUNT
+              </Text>
+            )}
           </Button>
           <Text
             style={{
@@ -153,20 +172,27 @@ export default function Register({ navigation }: { navigation: any }) {
               gap: normalize(10),
             }}
             onPress={handleGoogleRegister}
+            disabled={googleLoading}
           >
-            <Image
-              source={require('../../assets/icons/google.png')}
-              style={{ width: normalize(20), height: normalize(20) }}
-            />
-            <Text
-              style={{
-                color: COLORS.black,
-                fontSize: normalize(16),
-                fontWeight: 'bold',
-              }}
-            >
-              LOGIN WITH GOOGLE
-            </Text>
+            {googleLoading ? (
+              <ActivityIndicator size="small" color={COLORS.black} />
+            ) : (
+              <>
+                <Image
+                  source={require('../../assets/icons/google.png')}
+                  style={{ width: normalize(20), height: normalize(20) }}
+                />
+                <Text
+                  style={{
+                    color: COLORS.black,
+                    fontSize: normalize(16),
+                    fontWeight: 'bold',
+                  }}
+                >
+                  LOGIN WITH GOOGLE
+                </Text>
+              </>
+            )}
           </Button>
 
           <TouchableOpacity

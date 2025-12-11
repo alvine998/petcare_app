@@ -215,6 +215,11 @@ export default function Home({ navigation }: { navigation: any }) {
     }, [loadUserData, loadPets]),
   );
 
+  // Log pets when it changes
+  useEffect(() => {
+    console.log('Pets count:', yourPets.length, 'Pets:', yourPets);
+  }, [yourPets]);
+
   const handleRefresh = async () => {
     setRefreshing(true);
     try {
@@ -624,7 +629,7 @@ export default function Home({ navigation }: { navigation: any }) {
               <TouchableOpacity
                 key={service.id}
                 onPress={() => {
-                  if (service.navigation === 'Activity' || service.navigation === 'Networking') {
+                  if (service.navigation === 'Networking') {
                     // Show coming soon toast
                     if (Platform.OS === 'android') {
                       ToastAndroid.show('Coming Soon', ToastAndroid.SHORT);
@@ -634,6 +639,17 @@ export default function Home({ navigation }: { navigation: any }) {
                   } else if (service.navigation === 'Find') {
                     // Navigate to MainTabs with Find screen
                     navigation.navigate('MainTabs', { screen: 'Find' });
+                  } else if (service.navigation === 'ListInformation') {
+                    // Check if user has pets before navigating to Health
+                    if (yourPets.length === 0) {
+                      if (Platform.OS === 'android') {
+                        ToastAndroid.show('Please create a pet first', ToastAndroid.SHORT);
+                      } else {
+                        Alert.alert('No Pet', 'Please create a pet first to access Health services');
+                      }
+                    } else {
+                      navigation.navigate(service.navigation);
+                    }
                   } else {
                     navigation.navigate(service.navigation);
                   }

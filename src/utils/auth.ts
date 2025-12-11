@@ -24,6 +24,10 @@ export const signUpWithEmail = async (
   profile?: { firstName?: string; lastName?: string },
 ) => {
   try {
+    // Check network connectivity first
+    console.log('Attempting to create user account...');
+    console.log('Firebase Auth instance:', auth().app.name);
+    
     // Always create new user account
     // Firebase will automatically throw error if email already exists (auth/email-already-in-use)
     // This ensures we always create a new user, never reuse existing accounts
@@ -61,7 +65,47 @@ export const signUpWithEmail = async (
     return user;
   } catch (error: any) {
     console.log('signUpWithEmail error', error);
-    Alert.alert('Register failed', error.message ?? 'Something went wrong');
+    
+    let errorMessage = 'Something went wrong. Please try again.';
+    let errorTitle = 'Register failed';
+    
+    // Handle specific Firebase error codes
+    if (error.code) {
+      switch (error.code) {
+        case 'auth/network-request-failed':
+          errorTitle = 'Network Error';
+          errorMessage = 'Unable to connect to the server. Please check your internet connection and try again.';
+          break;
+        case 'auth/email-already-in-use':
+          errorTitle = 'Email Already Registered';
+          errorMessage = 'This email is already registered. Please use a different email or try logging in.';
+          break;
+        case 'auth/invalid-email':
+          errorTitle = 'Invalid Email';
+          errorMessage = 'Please enter a valid email address.';
+          break;
+        case 'auth/weak-password':
+          errorTitle = 'Weak Password';
+          errorMessage = 'Password should be at least 6 characters long.';
+          break;
+        case 'auth/operation-not-allowed':
+          errorTitle = 'Registration Disabled';
+          errorMessage = 'Email/password registration is not enabled. Please contact support.';
+          break;
+        case 'auth/too-many-requests':
+          errorTitle = 'Too Many Requests';
+          errorMessage = 'Too many failed attempts. Please try again later.';
+          break;
+        default:
+          if (error.message) {
+            errorMessage = error.message;
+          }
+      }
+    } else if (error.message) {
+      errorMessage = error.message;
+    }
+    
+    Alert.alert(errorTitle, errorMessage);
     throw error;
   }
 };
@@ -114,13 +158,16 @@ export const signInWithGoogle = async () => {
       // Check for specific error codes
       if (signInError.code === '10' || signInError.message?.includes('DEVELOPER_ERROR') || signInError.message?.includes('Developer_error')) {
         throw new Error(
-          'Developer Error: Please check:\n' +
-          '1. SHA-1 key from your real device is added to Firebase Console\n' +
-          '2. Package name matches in Firebase Console\n' +
-          '3. OAuth consent screen is configured in Google Cloud Console\n' +
-          '4. Web Client ID is correct in firebase.ts\n\n' +
-          'To get SHA-1 from real device:\n' +
-          'keytool -list -v -keystore android/app/debug.keystore -alias androiddebugkey -storepass android -keypass android'
+          'Developer Error: SHA-1 key belum ditambahkan ke Firebase Console\n\n' +
+          'Langkah-langkah:\n' +
+          '1. Dapatkan SHA-1 dari keystore yang digunakan:\n' +
+          '   - Debug: cd android && ./gradlew signingReport\n' +
+          '   - Release: cd android/app && keytool -list -v -keystore my-release-key.keystore -alias my-key-alias\n\n' +
+          '2. Buka Firebase Console > Project Settings > Your apps > Android app\n' +
+          '3. Klik "Add fingerprint" dan paste SHA-1\n' +
+          '4. Save dan tunggu 2-5 menit\n' +
+          '5. Install ulang APK dan test lagi\n\n' +
+          'Lihat ADD_SHA1_TO_FIREBASE.md untuk panduan lengkap.'
         );
       }
       
